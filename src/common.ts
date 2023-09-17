@@ -1,3 +1,4 @@
+import { Action } from "../convex/games";
 import { Actor, Game, Player } from "../convex/schema";
 
 export function claim(
@@ -54,4 +55,58 @@ export function whoseMove(game: Game): Player {
     return "mediator";
   }
   return game.currentActor;
+}
+
+export function score(game: Game): { red: number; blue: number } {
+  const scores = { red: 0, blue: 0 };
+  for (const row of game.cells) {
+    for (const cell of row) {
+      if (cell.occupier) {
+        scores[cell.occupier.actor] += cell.worth[cell.occupier.actor];
+      }
+    }
+  }
+  return scores;
+}
+
+export function step(game: Game, action: Action): Game {
+  switch (action.type) {
+    case "pass":
+      return {
+        cells: game.cells,
+        currentActor: otherActor(game.currentActor),
+        currentActorDelegated: false,
+        lastActorPassed: true,
+        isOver: game.lastActorPassed,
+        remainingResources: game.remainingResources,
+      };
+    case "claim": {
+      const newGame = claim(game, action.i, action.j);
+      if (newGame.type === "err") {
+        throw new Error(newGame.msg);
+      }
+      return newGame.res;
+    }
+    case "release":
+      return {
+        ...game,
+        currentActorDelegated: false,
+        cells: game.cells.map((row, i) =>
+          row.map((cell, j) => {
+            if (i === action.i && j === action.j) {
+              return {
+                ...cell,
+                occupier: undefined,
+              };
+            }
+            return cell;
+          }),
+        ),
+      };
+    case "delegateToMediator":
+      return {
+        ...game,
+        currentActorDelegated: true,
+      };
+  }
 }

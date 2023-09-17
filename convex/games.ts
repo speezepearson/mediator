@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { Game, playerT } from "./schema";
-import { otherActor, claim, whoseMove } from "../src/common";
+import { whoseMove, step } from "../src/common";
 
 export const get = query({
   args: { id: v.id("games") },
@@ -72,45 +72,3 @@ export const move = mutation({
     await ctx.db.replace(id, newGame);
   },
 });
-
-export function step(game: Game, action: Action): Game {
-  switch (action.type) {
-    case "pass":
-      return {
-        cells: game.cells,
-        currentActor: otherActor(game.currentActor),
-        currentActorDelegated: false,
-        lastActorPassed: true,
-        isOver: game.lastActorPassed,
-        remainingResources: game.remainingResources,
-      };
-    case "claim": {
-      const newGame = claim(game, action.i, action.j);
-      if (newGame.type === "err") {
-        throw new Error(newGame.msg);
-      }
-      return newGame.res;
-    }
-    case "release":
-      return {
-        ...game,
-        currentActorDelegated: false,
-        cells: game.cells.map((row, i) =>
-          row.map((cell, j) => {
-            if (i === action.i && j === action.j) {
-              return {
-                ...cell,
-                occupier: undefined,
-              };
-            }
-            return cell;
-          }),
-        ),
-      };
-    case "delegateToMediator":
-      return {
-        ...game,
-        currentActorDelegated: true,
-      };
-  }
-}

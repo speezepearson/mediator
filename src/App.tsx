@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
 import { Action } from "../convex/games";
-import { claim, whoseMove } from "./common";
+import { claim, score, step, whoseMove } from "./common";
 import { useState } from "react";
 import { Player } from "../convex/schema";
 
@@ -102,6 +102,7 @@ function App(props: {
   }
   const isOurTurn = !game.isOver && whoseMove(game) === player;
   const move = (action: Action) => moveMut({ id: game._id, player, action });
+  const scores = score(game);
 
   return (
     <>
@@ -116,23 +117,19 @@ function App(props: {
         (game.currentActor === "red" ? "Red's turn" : "Blue's turn") +
         (game.currentActorDelegated ? " (delegated)" : "")
       )}
-      {isOurTurn && (
-        <button
-          className="btn btn-sm btn-outline-secondary"
-          onClick={() => move({ type: "pass" })}
-        >
-          Pass
-        </button>
-      )}
-      {isOurTurn && (
-        <button
-          className="btn btn-sm btn-outline-secondary"
-          onClick={() => move({ type: "delegateToMediator" })}
-        >
-          Delegate
-        </button>
-      )}
-      <table className="text-center">
+      <div>
+        Your score:{" "}
+        {player === "mediator" ? (
+          <>
+            {scores.red + scores.blue} ={" "}
+            <span style={{ color: "red" }}>{scores.red}</span> +{" "}
+            <span style={{ color: "blue" }}>{scores.blue}</span>
+          </>
+        ) : (
+          scores[player]
+        )}
+      </div>
+      <table className="text-center mt-2">
         <tbody>
           {game.cells.map((row, i) => (
             <tr key={i}>
@@ -145,40 +142,40 @@ function App(props: {
                   cell.occupier?.actor !== game.currentActor &&
                   claim(game, i, j).type === "ok";
                 return (
-                  <td
-                    key={j}
-                    style={{
-                      width: "50px",
-                      height: "50px",
-                      backgroundColor: ((): string => {
-                        switch (cell.occupier?.actor) {
-                          case undefined:
-                            return "white";
-                          case "red":
-                            return "#ff000044";
-                          case "blue":
-                            return "#0000ff44";
-                        }
-                      })(),
-                      outline: cell.occupier?.mediated
-                        ? "2px solid gold"
-                        : undefined,
-                    }}
-                    onClick={async () => {
-                      if (cell.occupier?.actor === game.currentActor)
-                        return await move({ type: "release", i, j });
-                      if (!canClaim) return;
-                      await move({ type: "claim", i, j });
-                    }}
-                  >
-                    {player === "mediator" ? (
-                      <>
-                        <div style={{ color: "red" }}>{cell.worth.red}</div>
-                        <div style={{ color: "blue" }}>{cell.worth.blue}</div>
-                      </>
-                    ) : (
-                      cell.worth[player]
-                    )}
+                  <td key={j}>
+                    <button
+                      className="btn btn-sm btn-outline-primary"
+                      style={{
+                        backgroundColor: ((): string => {
+                          switch (cell.occupier?.actor) {
+                            case undefined:
+                              return "";
+                            case "red":
+                              return "#ff000044";
+                            case "blue":
+                              return "#0000ff44";
+                          }
+                        })(),
+                        outline: cell.occupier?.mediated
+                          ? "2px solid gold"
+                          : undefined,
+                      }}
+                      onClick={async () => {
+                        if (cell.occupier?.actor === game.currentActor)
+                          return await move({ type: "release", i, j });
+                        if (!canClaim) return;
+                        await move({ type: "claim", i, j });
+                      }}
+                    >
+                      {player === "mediator" ? (
+                        <>
+                          <div style={{ color: "red" }}>{cell.worth.red}</div>
+                          <div style={{ color: "blue" }}>{cell.worth.blue}</div>
+                        </>
+                      ) : (
+                        cell.worth[player]
+                      )}
+                    </button>
                   </td>
                 );
               })}
@@ -186,6 +183,22 @@ function App(props: {
           ))}
         </tbody>
       </table>
+      <div className="mt-2">
+        <button
+          className="btn btn-sm btn-outline-primary"
+          onClick={() => move({ type: "pass" })}
+          disabled={!isOurTurn}
+        >
+          Pass {step(game, { type: "pass" })?.isOver && " (end game)"}
+        </button>
+        <button
+          className="btn btn-sm btn-outline-primary ms-1"
+          onClick={() => move({ type: "delegateToMediator" })}
+          disabled={!isOurTurn}
+        >
+          Delegate
+        </button>
+      </div>
     </>
   );
 }
