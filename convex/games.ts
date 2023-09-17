@@ -39,7 +39,13 @@ export const create = mutation({
 export const actionT = v.union(
   v.object({
     type: v.literal("claim"),
-    cell: v.array(v.number()),
+    i: v.number(),
+    j: v.number(),
+  }),
+  v.object({
+    type: v.literal("release"),
+    i: v.number(),
+    j: v.number(),
   }),
   v.object({ type: v.literal("delegateToMediator") }),
   v.object({ type: v.literal("pass") }),
@@ -79,13 +85,28 @@ export function step(game: Game, action: Action): Game {
         remainingResources: game.remainingResources,
       };
     case "claim": {
-      const [x, y] = action.cell;
-      const newGame = claim(game, x, y);
+      const newGame = claim(game, action.i, action.j);
       if (newGame.type === "err") {
         throw new Error(newGame.msg);
       }
       return newGame.res;
     }
+    case "release":
+      return {
+        ...game,
+        currentActorDelegated: false,
+        cells: game.cells.map((row, i) =>
+          row.map((cell, j) => {
+            if (i === action.i && j === action.j) {
+              return {
+                ...cell,
+                occupier: undefined,
+              };
+            }
+            return cell;
+          }),
+        ),
+      };
     case "delegateToMediator":
       return {
         ...game,

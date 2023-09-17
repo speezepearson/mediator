@@ -165,8 +165,10 @@ function App(props: {
                         : undefined,
                     }}
                     onClick={async () => {
+                      if (cell.occupier?.actor === game.currentActor)
+                        return await move({ type: "release", i, j });
                       if (!canClaim) return;
-                      await move({ type: "claim", cell: [i, j] });
+                      await move({ type: "claim", i, j });
                     }}
                   >
                     {player === "mediator" ? (
