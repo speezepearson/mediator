@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { Game, actorT } from "./schema";
-import { otherActor, claim } from "../src/common";
+import { Game, playerT } from "./schema";
+import { otherActor, claim, whoseMove } from "../src/common";
 
 export const get = query({
   args: { id: v.id("games") },
@@ -13,16 +13,19 @@ export const get = query({
 export const create = mutation({
   args: {},
   handler: async (ctx) => {
-    const cells: (Game["cells"]) = [];
-    for (let i = 0; i < 7; i++) {
+    const cells: Game["cells"] = [];
+    for (let i = 0; i < 1; i++) {
       cells.push([]);
-      for (let j = 0; j < 7; j++) {
+      for (let j = 0; j < 20; j++) {
         cells[i].push({
-          worth: { red: 1, blue: 1 },
+          worth: {
+            red: Math.floor(5 * Math.random()),
+            blue: Math.floor(5 * Math.random()),
+          },
         });
       }
     }
-    return await ctx.db.insert('games', {
+    return await ctx.db.insert("games", {
       cells: cells,
       currentActor: "red",
       currentActorDelegated: false,
@@ -45,16 +48,19 @@ export type Action = typeof actionT.type;
 export const move = mutation({
   args: {
     id: v.id("games"),
-    player: actorT,
+    player: playerT,
     action: actionT,
   },
-  handler: async (ctx, { id, action }) => {
+  handler: async (ctx, { id, player, action }) => {
     const oldGame = await ctx.db.get(id);
     if (oldGame === null) {
       throw new Error("Game not found");
     }
     if (oldGame.isOver) {
       throw new Error("Game already over");
+    }
+    if (player !== whoseMove(oldGame)) {
+      throw new Error("not your turn");
     }
     const newGame = step(oldGame, action);
     await ctx.db.replace(id, newGame);

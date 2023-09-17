@@ -1,4 +1,4 @@
-import { Actor, Game } from "../convex/schema";
+import { Actor, Game, Player } from "../convex/schema";
 
 export function claim(
   game: Game,
@@ -47,4 +47,11 @@ export function otherActor(actor: Actor): Actor {
     case "blue":
       return "red";
   }
+}
+
+export function whoseMove(game: Game): Player {
+  if (game.currentActorDelegated) {
+    return "mediator";
+  }
+  return game.currentActor;
 }
