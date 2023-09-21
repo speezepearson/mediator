@@ -145,7 +145,7 @@ function App(props: {
                   cell.occupier?.actor !== game.currentActor &&
                   claim(game, i, j).type === "ok";
                 return (
-                  <td key={j}>
+                  <td key={j} className="p-0">
                     <button
                       className="btn btn-sm btn-outline-primary"
                       style={{
