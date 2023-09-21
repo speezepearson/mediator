@@ -29,8 +29,11 @@ function GameSelector(props: {
       const [size, startingResources] = [sizeF, startingResourcesF].map((x) =>
         parseInt(x),
       );
-      if (size <= 0) {
-        return { type: "err", msg: "size must be positive" };
+      if (isNaN(size) || isNaN(startingResources)) {
+        return { type: "err", msg: "invalid input" };
+      }
+      if (size <= 1) {
+        return { type: "err", msg: "size must be at least 2" };
       }
       if (size > 20) {
         return { type: "err", msg: "size must be <= 20" };
@@ -95,20 +98,15 @@ function GameSelector(props: {
           onClick={() => {
             if (board.type === "err") return;
             props.onCreate({
-              startingResources: parseInt(startingResourcesF),
-              boardDistribution: board.val.dist,
+              game: board.val.sample,
             });
           }}
         >
           Create game
         </button>
-        {board.type !== "err" && (
+        {board.type === "err" ? <div className="text-danger">{board.msg}</div> : (
           <>
-            <RenderBoard
-              game={board.val.sample}
-              player="red"
-              onMove={() => {}}
-            />
+            <RenderBoard game={board.val.sample} player="red" onMove={null} />
           </>
         )}
       </div>
@@ -145,13 +143,15 @@ function PlayerSelector(props: { onSet: (player: Player) => void }) {
 function RenderBoard(props: {
   game: Game;
   player: Player;
-  onMove: (action: Action) => void;
+  onMove: null | ((action: Action) => void);
 }) {
   const { game, player, onMove } = props;
   const isOurTurn = !game.isOver && whoseMove(game) === player;
   const maxY = Math.max(...game.cells.map(({ i, j }) => hexy2xy(i, j)[1]));
 
-  const ownedCells = game.cells.filter(({ v }) => v.occupier?.actor === game.currentActor);
+  const ownedCells = game.cells.filter(
+    ({ v }) => v.occupier?.actor === game.currentActor,
+  );
   const neighborCellIdxs = Set(
     ownedCells.flatMap(({ i, j }) =>
       hexNeighbors(i, j).map(([i, j]) => `${i},${j}`),
@@ -164,6 +164,7 @@ function RenderBoard(props: {
       {game.cells.map(({ i, j, v: cell }) => {
         const canClaim =
           isOurTurn &&
+          onMove !== null &&
           ((!game.currentActorDelegated && player === game.currentActor) ||
             (game.currentActorDelegated && player === "mediator")) &&
           cell.occupier?.actor !== game.currentActor &&
@@ -198,6 +199,7 @@ function RenderBoard(props: {
               }}
               disabled={!canClaim}
               onClick={async () => {
+                if (onMove === null) return;
                 if (cell.occupier?.actor === game.currentActor)
                   return await onMove({ type: "release", i, j });
                 if (!canClaim) return;

@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { playerT } from "./schema";
-import { whoseMove, step, sampleFromGameDistribution } from "../src/common";
+import { gameT, playerT } from "./schema";
+import { whoseMove, step } from "../src/common";
 
 export const get = query({
   args: { id: v.id("games") },
@@ -25,15 +25,13 @@ export const gameDistributionT = v.object({
 export type GameDistribution = typeof gameDistributionT.type;
 
 export const create = mutation({
-  args: {
-    startingResources: v.number(),
-    boardDistribution: gameDistributionT,
-  },
+  args: { game: gameT },
   handler: async (ctx, args) => {
-    return await ctx.db.insert(
-      "games",
-      sampleFromGameDistribution(args.boardDistribution),
-    );
+    const storage = JSON.stringify(args.game).length;
+    if (storage > 20000) {
+      throw new Error("game too big");
+    }
+    return await ctx.db.insert("games", args.game);
   },
 });
 
