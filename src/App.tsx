@@ -151,7 +151,7 @@ function RenderBoard(props: {
   const isOurTurn = !game.isOver && whoseMove(game) === player;
   const maxY = Math.max(...game.cells.map(({ i, j }) => hexy2xy(i, j)[1]));
 
-  const ownedCells = game.cells.filter(({ v }) => v.occupier?.actor === player);
+  const ownedCells = game.cells.filter(({ v }) => v.occupier?.actor === game.currentActor);
   const neighborCellIdxs = Set(
     ownedCells.flatMap(({ i, j }) =>
       hexNeighbors(i, j).map(([i, j]) => `${i},${j}`),
