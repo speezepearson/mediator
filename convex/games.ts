@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { playerT } from "./schema";
-import { whoseMove, step, sampleFromBoardDistribution } from "../src/common";
+import { whoseMove, step, sampleFromGameDistribution } from "../src/common";
 
 export const get = query({
   args: { id: v.id("games") },
@@ -10,30 +10,30 @@ export const get = query({
   },
 });
 
-export const boardDistributionT = v.object({
-  type: v.literal("iid-uniform-grid"),
-  w: v.number(),
-  h: v.number(),
-  min: v.number(),
-  max: v.number(),
+export const gameDistributionT = v.object({
+  resources: v.union(
+    v.object({ type: v.literal("exact"), value: v.number() }),
+    v.object({ type: v.literal("uniform"), min: v.number(), max: v.number() }),
+  ),
+  board: v.object({
+    type: v.literal("iid-uniform-hex-grid"),
+    sideLength: v.number(),
+    min: v.number(),
+    max: v.number(),
+  }),
 });
-export type BoardDistribution = typeof boardDistributionT.type;
+export type GameDistribution = typeof gameDistributionT.type;
 
 export const create = mutation({
   args: {
     startingResources: v.number(),
-    boardDistribution: boardDistributionT,
+    boardDistribution: gameDistributionT,
   },
   handler: async (ctx, args) => {
-    const board = sampleFromBoardDistribution(args.boardDistribution);
-    return await ctx.db.insert("games", {
-      cells: board,
-      currentActor: "red",
-      currentActorDelegated: false,
-      isOver: false,
-      lastActorPassed: false,
-      remainingResources: { red: 20, blue: 20 },
-    });
+    return await ctx.db.insert(
+      "games",
+      sampleFromGameDistribution(args.boardDistribution),
+    );
   },
 });
 

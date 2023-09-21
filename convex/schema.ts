@@ -14,8 +14,10 @@ export const gameT = v.object({
   isOver: v.boolean(),
   currentActorDelegated: v.boolean(),
   cells: v.array(
-    v.array(
-      v.object({
+    v.object({
+      i: v.number(),
+      j: v.number(),
+      v: v.object({
         occupier: v.optional(
           v.object({
             actor: actorT,
@@ -27,7 +29,7 @@ export const gameT = v.object({
           blue: v.number(),
         }),
       }),
-    ),
+    }),
   ),
 });
 export type Game = typeof gameT.type;

@@ -1,11 +1,12 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
-import { Action, BoardDistribution } from "../convex/games";
+import { Action, GameDistribution } from "../convex/games";
 import {
   Result,
   claim,
-  sampleFromBoardDistribution,
+  hexy2xy,
+  sampleFromGameDistribution,
   score,
   step,
   whoseMove,
@@ -18,32 +19,38 @@ function GameSelector(props: {
   onJoin: (id: Id<"games">) => void;
 }) {
   const [gameIdF, setGameIdF] = useState("");
-  const [widthF, setWidthF] = useState("5");
-  const [heightF, setHeightF] = useState("5");
+  const [sizeF, setSizeF] = useState("5");
   const [startingResourcesF, setStartingResourcesF] = useState("30");
 
-  const board: Result<{ dist: BoardDistribution; sample: Game["cells"] }> =
+  const board: Result<{ dist: GameDistribution; sample: Game }> =
     useMemo(() => {
-      const [w, h] = [widthF, heightF].map((x) => parseInt(x));
-      if (w <= 0 || h <= 0) {
-        return { type: "err", msg: "Width and height must be positive" };
+      const [size, startingResources] = [sizeF, startingResourcesF].map((x) =>
+        parseInt(x),
+      );
+      if (size <= 0) {
+        return { type: "err", msg: "size must be positive" };
       }
-      if (w > 20 || h > 20) {
-        return { type: "err", msg: "Width and height must be <= 20" };
+      if (size > 20) {
+        return { type: "err", msg: "size must be <= 20" };
+      }
+      if (startingResources <= 0) {
+        return { type: "err", msg: "starting resources must be positive" };
       }
 
-      const dist: BoardDistribution = {
-        type: "iid-uniform-grid",
-        w: parseInt(widthF),
-        h: parseInt(heightF),
-        min: 0,
-        max: 10,
+      const dist: GameDistribution = {
+        resources: { type: "exact", value: startingResources },
+        board: {
+          type: "iid-uniform-hex-grid",
+          sideLength: parseInt(sizeF),
+          min: 0,
+          max: 10,
+        },
       };
       return {
         type: "ok",
-        val: { dist, sample: sampleFromBoardDistribution(dist) },
+        val: { dist, sample: sampleFromGameDistribution(dist) },
       };
-    }, [widthF, heightF]);
+    }, [sizeF, startingResourcesF]);
 
   return (
     <div>
@@ -71,15 +78,8 @@ function GameSelector(props: {
           className="ms-2"
           type="text"
           placeholder="Width"
-          onChange={(e) => setWidthF(e.target.value)}
-          value={widthF}
-        />
-        <input
-          className="ms-2"
-          type="text"
-          placeholder="Height"
-          onChange={(e) => setHeightF(e.target.value)}
-          value={heightF}
+          onChange={(e) => setSizeF(e.target.value)}
+          value={sizeF}
         />
         <input
           className="ms-2"
@@ -103,15 +103,8 @@ function GameSelector(props: {
         {board.type !== "err" && (
           <>
             <RenderBoard
-              game={{
-                cells: board.val.sample,
-                currentActor: "red",
-                isOver: false,
-                currentActorDelegated: false,
-                lastActorPassed: false,
-                remainingResources: { red: 0, blue: 0 },
-              }}
-              player="mediator"
+              game={board.val.sample}
+              player="red"
               onMove={() => {}}
             />
           </>
@@ -154,62 +147,64 @@ function RenderBoard(props: {
 }) {
   const { game, player, onMove } = props;
   const isOurTurn = !game.isOver && whoseMove(game) === player;
+  const maxY = Math.max(...game.cells.map(({ i, j }) => hexy2xy(i, j)[1]));
+  console.log({ maxY });
 
   return (
-    <table className="text-center mt-2">
-      <tbody>
-        {game.cells.map((row, i) => (
-          <tr key={i}>
-            {row.map((cell, j) => {
-              const canClaim =
-                isOurTurn &&
-                ((!game.currentActorDelegated &&
-                  player === game.currentActor) ||
-                  (game.currentActorDelegated && player === "mediator")) &&
-                cell.occupier?.actor !== game.currentActor &&
-                claim(game, i, j).type === "ok";
-              return (
-                <td key={j} className="p-0">
-                  <button
-                    className="btn btn-sm btn-outline-primary"
-                    style={{
-                      backgroundColor: ((): string => {
-                        switch (cell.occupier?.actor) {
-                          case undefined:
-                            return "";
-                          case "red":
-                            return "#ff000044";
-                          case "blue":
-                            return "#0000ff44";
-                        }
-                      })(),
-                      outline: cell.occupier?.mediated
-                        ? "2px solid gold"
-                        : undefined,
-                    }}
-                    onClick={async () => {
-                      if (cell.occupier?.actor === game.currentActor)
-                        return await onMove({ type: "release", i, j });
-                      if (!canClaim) return;
-                      await onMove({ type: "claim", i, j });
-                    }}
-                  >
-                    {player === "mediator" ? (
-                      <>
-                        <div style={{ color: "red" }}>{cell.worth.red}</div>
-                        <div style={{ color: "blue" }}>{cell.worth.blue}</div>
-                      </>
-                    ) : (
-                      cell.worth[player]
-                    )}
-                  </button>
-                </td>
-              );
-            })}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="position-relative">
+      {" "}
+      {game.cells.map(({ i, j, v: cell }) => {
+        const canClaim =
+          isOurTurn &&
+          ((!game.currentActorDelegated && player === game.currentActor) ||
+            (game.currentActorDelegated && player === "mediator")) &&
+          cell.occupier?.actor !== game.currentActor &&
+          claim(game, i, j).type === "ok";
+        const [x, y] = hexy2xy(i, j);
+        return (
+          <div
+            key={`${i},${j}`}
+            className="position-absolute"
+            style={{
+              left: `${3 * x}em`,
+              top: `${3 * (maxY - y)}em`,
+            }}
+          >
+            <button
+              className="btn btn-sm btn-outline-primary"
+              style={{
+                backgroundColor: ((): string => {
+                  switch (cell.occupier?.actor) {
+                    case undefined:
+                      return "";
+                    case "red":
+                      return "#ff000044";
+                    case "blue":
+                      return "#0000ff44";
+                  }
+                })(),
+                outline: cell.occupier?.mediated ? "2px solid gold" : undefined,
+              }}
+              onClick={async () => {
+                if (cell.occupier?.actor === game.currentActor)
+                  return await onMove({ type: "release", i, j });
+                if (!canClaim) return;
+                await onMove({ type: "claim", i, j });
+              }}
+            >
+              {player === "mediator" ? (
+                <>
+                  <div style={{ color: "red" }}>{cell.worth.red}</div>
+                  <div style={{ color: "blue" }}>{cell.worth.blue}</div>
+                </>
+              ) : (
+                cell.worth[player]
+              )}
+            </button>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -280,7 +275,6 @@ function App(props: {
       {player !== "mediator" && (
         <div>Remaining resources: {game.remainingResources[player]}</div>
       )}
-      <RenderBoard game={game} player={player} onMove={move} />
       <div className="mt-2">
         <button
           className="btn btn-sm btn-outline-primary"
@@ -297,6 +291,7 @@ function App(props: {
           Delegate
         </button>
       </div>
+      <RenderBoard game={game} player={player} onMove={move} />
     </>
   );
 }
