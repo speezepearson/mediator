@@ -143,6 +143,17 @@ export function sampleFromGameDistribution(dist: GameDistribution): Game {
     }
   })();
 
+  const redStart = Math.floor(Math.random() * cells.length);
+  const blueStart = (() => {
+    let res = Math.floor(Math.random() * cells.length);
+    while (res === redStart) {
+      res = Math.floor(Math.random() * cells.length);
+    }
+    return res;
+  })();
+  cells[redStart].v.occupier = { actor: "red", mediated: false };
+  cells[blueStart].v.occupier = { actor: "blue", mediated: false };
+
   return {
     cells,
     remainingResources,

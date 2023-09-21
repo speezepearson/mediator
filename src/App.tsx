@@ -5,6 +5,7 @@ import { Action, GameDistribution } from "../convex/games";
 import {
   Result,
   claim,
+  hexNeighbors,
   hexy2xy,
   sampleFromGameDistribution,
   score,
@@ -13,6 +14,7 @@ import {
 } from "./common";
 import { useMemo, useState } from "react";
 import { Game, Player } from "../convex/schema";
+import { Set } from "immutable";
 
 function GameSelector(props: {
   onCreate: (params: typeof api.games.create._args) => Promise<void>;
@@ -148,7 +150,13 @@ function RenderBoard(props: {
   const { game, player, onMove } = props;
   const isOurTurn = !game.isOver && whoseMove(game) === player;
   const maxY = Math.max(...game.cells.map(({ i, j }) => hexy2xy(i, j)[1]));
-  console.log({ maxY });
+
+  const ownedCells = game.cells.filter(({ v }) => v.occupier?.actor === player);
+  const neighborCellIdxs = Set(
+    ownedCells.flatMap(({ i, j }) =>
+      hexNeighbors(i, j).map(([i, j]) => `${i},${j}`),
+    ),
+  );
 
   return (
     <div className="position-relative">
@@ -159,6 +167,7 @@ function RenderBoard(props: {
           ((!game.currentActorDelegated && player === game.currentActor) ||
             (game.currentActorDelegated && player === "mediator")) &&
           cell.occupier?.actor !== game.currentActor &&
+          neighborCellIdxs.has(`${i},${j}`) &&
           claim(game, i, j).type === "ok";
         const [x, y] = hexy2xy(i, j);
         return (
@@ -171,7 +180,9 @@ function RenderBoard(props: {
             }}
           >
             <button
-              className="btn btn-sm btn-outline-primary"
+              className={`btn btn-sm btn-outline-${
+                canClaim ? "dark" : "muted"
+              }`}
               style={{
                 backgroundColor: ((): string => {
                   switch (cell.occupier?.actor) {
@@ -185,6 +196,7 @@ function RenderBoard(props: {
                 })(),
                 outline: cell.occupier?.mediated ? "2px solid gold" : undefined,
               }}
+              disabled={!canClaim}
               onClick={async () => {
                 if (cell.occupier?.actor === game.currentActor)
                   return await onMove({ type: "release", i, j });
