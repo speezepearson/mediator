@@ -1,5 +1,5 @@
-import { Action } from "../convex/games";
-import { Actor, Game, Player } from "../convex/schema";
+import { Action, BoardDistribution } from "../convex/games";
+import { Actor, Game, Player, gameT } from "../convex/schema";
 
 export function claim(
   game: Game,
@@ -110,3 +110,23 @@ export function step(game: Game, action: Action): Game {
       };
   }
 }
+export function sampleFromBoardDistribution(
+  dist: BoardDistribution,
+): typeof gameT.type.cells {
+  switch (dist.type) {
+    case "iid-uniform-grid": {
+      const [w, h, min, max] = [dist.w, dist.h, dist.min, dist.max];
+      return Array.from({ length: h }, () =>
+        Array.from({ length: w }, () => ({
+          occupier: undefined,
+          worth: {
+            red: Math.floor(Math.random() * (max - min + 1) + min),
+            blue: Math.floor(Math.random() * (max - min + 1) + min),
+          },
+        })),
+      );
+    }
+  }
+}
+
+export type Result<T> = { type: "ok"; val: T } | { type: "err"; msg: string };
