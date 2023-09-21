@@ -129,6 +129,9 @@ function App(props: {
           scores[player]
         )}
       </div>
+      {player !== "mediator" && <div>
+        Remaining resources: {game.remainingResources[player]}
+      </div>}
       <table className="text-center mt-2">
         <tbody>
           {game.cells.map((row, i) => (
