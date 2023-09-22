@@ -15,7 +15,9 @@ import {
 import { useMemo, useState } from "react";
 import { Game, Player } from "../convex/schema";
 import { Set } from "immutable";
-import { useNavigate } from "react-router-dom";
+import { useHref, useNavigate } from "react-router-dom";
+import QRCode from "react-qr-code";
+import { CopyWidget } from "./components/CopyWidget";
 
 export function WelcomePage() {
   return <>Hi!</>;
@@ -261,6 +263,8 @@ export function GamePage({ gameId, player }: GamePageProps) {
   );
   const moveMut = useMutation(api.games.move);
 
+  const joinLink = `${window.location.origin}/${useHref(`/g/${game?._id}`)}`;
+
   if (game === undefined) {
     return <div>Loading...</div>;
   }
@@ -271,8 +275,61 @@ export function GamePage({ gameId, player }: GamePageProps) {
   const move = (action: Action) => moveMut({ id: game._id, player, action });
   const scores = score(game);
 
+
   return (
     <>
+      <div>
+      <button
+        type="button"
+        className="btn btn-sm btn-outline-secondary ms-1"
+        data-bs-toggle="modal"
+        data-bs-target="#shareModal"
+      >
+        <i className="fa fa-share"></i> Share
+      </button>
+      </div>
+      <div
+        className="modal fade"
+        id="shareModal"
+        tabIndex={-1}
+        aria-labelledby="exampleModalLabel"
+        aria-hidden="true"
+      >
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header">
+              {/* <h5 className="modal-title" id="exampleModalLabel">Modal title</h5> */}
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              ></button>
+            </div>
+            <div className="modal-body text-center">
+              <div className="mt-1">
+                Your friends can join by scanning this handy QR code:
+              </div>
+              <QRCode className="mt-2" value={joinLink} />
+              <div className="mt-2">Or, send them this link:</div>
+              <CopyWidget
+                className="mt-1 mx-auto"
+                style={{ maxWidth: "20em" }}
+                text={joinLink}
+              />
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                data-bs-dismiss="modal"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
       {game.isOver ? (
         "Game over"
       ) : isOurTurn ? (

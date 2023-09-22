@@ -3,6 +3,8 @@ import ReactDOM from "react-dom/client";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 
 import "./assets/bootstrap.min.css";
+import './assets/bootstrap.bundle.min.js';
+import './assets/fontawesome.js';
 import { RouterProvider, createHashRouter } from "react-router-dom";
 import { routes } from "./routes.tsx";
 
