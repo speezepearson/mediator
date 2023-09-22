@@ -13,7 +13,7 @@ import {
   step,
   whoseMove,
 } from "./common";
-import { useMemo, useState } from "react";
+import { HTMLAttributes, useMemo, useState } from "react";
 import { Game, Player } from "../convex/schema";
 import { Set } from "immutable";
 import { useHref } from "react-router-dom";
@@ -160,6 +160,45 @@ export function PlayerSelectionPage(props: PlayerSelectionPageProps) {
   );
 }
 
+function Hexagon(
+  props: {
+    w: number | string;
+    h: number | string;
+    outline?: { width: number; color: string };
+    innerStyle?: React.CSSProperties;
+  } & React.DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>,
+) {
+  const { w, h } = props;
+  const outerStyle = {
+    ...props.style,
+    width: w,
+    height: h,
+    clipPath: "polygon(0% 25%, 0% 75%, 50% 100%, 100% 75%, 100% 25%, 50% 0%)",
+    backgroundColor: props.outline?.color,
+  };
+  const outlineWidth = props.outline?.width ?? 0;
+  return (
+    <div className="position-absolute text-center p-0 m-0" style={outerStyle}>
+      <div
+        className="position-absolute"
+        style={{
+          left: outlineWidth,
+          top: outlineWidth,
+          clipPath:
+            "polygon(0% 25%, 0% 75%, 50% 100%, 100% 75%, 100% 25%, 50% 0%)",
+          backgroundColor: "white",
+          width: `calc(${w} - ${2 * outlineWidth}px)`,
+          height: `calc(${h} - ${2 * outlineWidth}px)`,
+          zIndex: 1,
+          ...props.innerStyle,
+        }}
+      >
+        {props.children}
+      </div>
+    </div>
+  );
+}
+
 function RenderBoard(props: {
   game: Game;
   player: Player;
@@ -167,7 +206,7 @@ function RenderBoard(props: {
 }) {
   const { game, player, onMove } = props;
   const isOurTurn = !game.isOver && whoseMove(game) === player;
-  const { minX, maxX, minY, maxY } = game.cells.reduce(
+  const { minX, minY } = game.cells.reduce(
     ({ minX, maxX, minY, maxY }, { i, j }) => {
       const [x, y] = hexy2xy(i, j);
       return {
@@ -219,36 +258,37 @@ function RenderBoard(props: {
               claim(game, i, j).type === "ok";
             const [x, y] = hexy2xy(i, j);
             return (
-              <div
+              <Hexagon
                 key={`${i},${j}`}
                 className="position-absolute text-center p-0 m-0"
+                w={`${3}em`}
+                h={`${(3 * 2) / Math.sqrt(3)}em`}
+                outline={
+                  cell.occupier?.mediated
+                    ? { width: 3, color: "#ff00ff" }
+                    : canClaim
+                    ? { width: 1, color: game.currentActor }
+                    : undefined
+                }
                 style={{
-                  left: `${(100 * (x - minX)) / (maxX - minX) - 5}%`,
-                  top: `${(100 * (y - minY)) / (maxY - minY) - 5}%`,
-                  transform: "translate(-50%, -50%)",
-                  width: 0,
-                  height: 0,
+                  left: `${3.2 * (x - minX) - 2}em`,
+                  top: `${3.2 * (y - minY) - 2}em`,
+                }}
+                innerStyle={{
+                  backgroundColor: ((): string => {
+                    switch (cell.occupier?.actor) {
+                      case undefined:
+                        return "white";
+                      case "red":
+                        return "#ffcccc";
+                      case "blue":
+                        return "#ccccff";
+                    }
+                  })(),
                 }}
               >
                 <button
-                  className={`btn btn-sm btn-outline-${
-                    canClaim ? "dark" : "muted"
-                  }`}
-                  style={{
-                    backgroundColor: ((): string => {
-                      switch (cell.occupier?.actor) {
-                        case undefined:
-                          return "";
-                        case "red":
-                          return "#ff000044";
-                        case "blue":
-                          return "#0000ff44";
-                      }
-                    })(),
-                    outline: cell.occupier?.mediated
-                      ? "2px solid gold"
-                      : undefined,
-                  }}
+                  className={`btn btn-sm w-100 h-100`}
                   disabled={!canClaim}
                   onClick={async () => {
                     if (onMove === null) return;
@@ -267,7 +307,7 @@ function RenderBoard(props: {
                     cell.worth[player]
                   )}
                 </button>
-              </div>
+              </Hexagon>
             );
           })}
         </div>
