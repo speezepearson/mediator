@@ -19,7 +19,11 @@ import { Set } from "immutable";
 import { useHref } from "react-router-dom";
 import QRCode from "react-qr-code";
 import { CopyWidget } from "./components/CopyWidget";
-import { useNavigateToGame, useNavigateToPlayerSelection } from "./routes";
+import {
+  makePlayerSelectionRoute,
+  useNavigateToGame,
+  useNavigateToPlayerSelection,
+} from "./routes";
 import React from "react";
 
 export function WelcomePage() {
@@ -389,7 +393,9 @@ export function GamePage({ gameId, player }: GamePageProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [rewind, ffward]);
 
-  const joinLink = `${window.location.origin}/${useHref(`/g/${game?._id}`)}`;
+  const joinLink = `${window.location.origin}${
+    window.location.pathname
+  }${useHref(makePlayerSelectionRoute({ gameId: game?._id as Id<"games"> }))}`;
 
   if (game === undefined) {
     return <div>Loading...</div>;
