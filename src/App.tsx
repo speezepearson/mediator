@@ -452,10 +452,10 @@ export function GamePage({ gameId, player }: GamePageProps) {
             </div>
           </div>
           {viewTime === null ? (
-            <div>Turn {nActions}</div>
+            <div>Turn {nActions} (←/→ to view history)</div>
           ) : (
             <div className="text-danger">
-              Viewing at time {viewTime} / {nActions - 1}{" "}
+              Viewing at time {viewTime} / {nActions}{" "}
               <button
                 className="btn btn-sm btn-outline-danger ms-1"
                 onClick={() => setViewTime(null)}
