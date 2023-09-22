@@ -32,7 +32,7 @@ export function GameSelectionPage() {
   const create = useMutation(api.games.create);
 
   const [gameIdF, setGameIdF] = useState("");
-  const [sizeF, setSizeF] = useState("5");
+  const [sizeF, setSizeF] = useState("4");
   const [startingResourcesF, setStartingResourcesF] = useState("30");
   const [mediatorBiasProbPctF, setMediatorBiasProbPctF] = useState("");
 
