@@ -409,24 +409,34 @@ export function GamePage({ gameId, player }: GamePageProps) {
           (game.currentActor === "red" ? "Red's turn" : "Blue's turn") +
           (game.currentActorDelegated ? " (delegated)" : "")
         )}
-        <div>
-          Your score:{" "}
-          {player === "mediator" ? (
-            <>
-              {scores.red + scores.blue} ={" "}
-              <span style={{ color: "red" }}>{scores.red}</span> +{" "}
-              <span style={{ color: "blue" }}>{scores.blue}</span>
-            </>
-          ) : (
-            scores[player]
+        <table className="table" style={{ maxWidth: "20em" }}>
+          <tr>
+            <td>Your score:</td>
+            <td>
+              {player === "mediator" ? (
+                <>
+                  {scores.red + scores.blue} ={" "}
+                  <span style={{ color: "red" }}>{scores.red}</span> +{" "}
+                  <span style={{ color: "blue" }}>{scores.blue}</span>
+                </>
+              ) : (
+                scores[player]
+              )}
+            </td>
+          </tr>
+          {player !== "mediator" && (
+            <tr>
+              <td>{playerName(otherActor(player))}'s score:</td>
+              <td> w/e</td>
+            </tr>
           )}
-        </div>
-        {player !== "mediator" && (
-          <div>{otherActor(player)}'s score: who cares</div>
-        )}
-        {player !== "mediator" && (
-          <div>Remaining resources: {game.remainingResources[player]}</div>
-        )}
+          {player !== "mediator" && (
+            <tr>
+              <td>Remaining resources:</td>
+              <td>{game.remainingResources[player]}</td>
+            </tr>
+          )}
+        </table>
         <div className="mt-2">
           <button
             className="btn btn-sm btn-outline-primary"
@@ -440,7 +450,7 @@ export function GamePage({ gameId, player }: GamePageProps) {
             onClick={() => move({ type: "delegateToMediator" })}
             disabled={!isOurTurn}
           >
-            Delegate
+            Delegate to Mediator
           </button>
         </div>
       </div>
@@ -449,4 +459,15 @@ export function GamePage({ gameId, player }: GamePageProps) {
       </div>
     </div>
   );
+}
+
+function playerName(player: Player): string {
+  switch (player) {
+    case "red":
+      return "Red";
+    case "blue":
+      return "Blue";
+    case "mediator":
+      return "Mediator";
+  }
 }
