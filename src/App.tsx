@@ -159,7 +159,18 @@ function RenderBoard(props: {
 }) {
   const { game, player, onMove } = props;
   const isOurTurn = !game.isOver && whoseMove(game) === player;
-  const maxY = Math.max(...game.cells.map(({ i, j }) => hexy2xy(i, j)[1]));
+  const {minX, maxX, minY, maxY} = game.cells.reduce(
+    ({minX, maxX, minY, maxY}, {i, j}) => {
+      const [x,y] = hexy2xy(i, j);
+      return {
+        minX: Math.min(minX, x),
+        maxX: Math.max(maxX, x),
+        minY: Math.min(minY, y),
+        maxY: Math.max(maxY, y),
+    };
+    },
+    {minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity},
+  )
 
   const ownedCells = game.cells.filter(
     ({ v }) => v.occupier?.actor === game.currentActor,
@@ -171,7 +182,7 @@ function RenderBoard(props: {
   );
 
   return (
-    <div className="position-relative">
+    <div className="position-relative m-4" style={{height: `${3*(maxY-minY)}em`, width: `${3*(maxX-minX)}em`}}>
       {" "}
       {game.cells.map(({ i, j, v: cell }) => {
         const canClaim =
@@ -186,10 +197,11 @@ function RenderBoard(props: {
         return (
           <div
             key={`${i},${j}`}
-            className="position-absolute"
+            className="position-absolute text-center p-0 m-0"
             style={{
-              left: `${3 * x}em`,
+              left: `${3 * (x - minX)}em`,
               top: `${3 * (maxY - y)}em`,
+              transform: "translate(-50%, -50%)",
             }}
           >
             <button
