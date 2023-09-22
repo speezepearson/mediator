@@ -89,66 +89,99 @@ export function GameSelectionPage() {
 
   return (
     <div>
-      <input
-        className="ms-2"
-        type="text"
-        placeholder="Game ID"
-        onChange={(e) => setGameIdF(e.target.value)}
-        value={gameIdF}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            navigateToPlayerSelection({ gameId: gameIdF as Id<"games"> });
-          }
-        }}
-      />
-      <button
-        className="btn btn-sm btn-primary ms-2"
-        disabled={gameIdF === ""}
-        onClick={() =>
-          navigateToPlayerSelection({ gameId: gameIdF as Id<"games"> })
-        }
-      >
-        Join game
-      </button>
-      <div>or</div>
-      <div>
+      <div className="card m-2 p-2">
         <input
           className="ms-2"
           type="text"
-          placeholder="Width"
-          onChange={(e) => setSizeF(e.target.value)}
-          value={sizeF}
-        />
-        <input
-          className="ms-2"
-          type="text"
-          placeholder="Starting resources"
-          onChange={(e) => setStartingResourcesF(e.target.value)}
-          value={startingResourcesF}
-        />
-        <input
-          className="ms-2"
-          type="number"
-          placeholder="% chance of biased mediator (0-100)"
-          onChange={(e) => setMediatorBiasProbPctF(e.target.value)}
-          value={mediatorBiasProbPctF}
-        />
-        <button
-          className="btn btn-sm btn-primary"
-          onClick={async () => {
-            if (board.type === "err") return;
-            const gid = await create({ game: board.val.sample });
-            navigateToPlayerSelection({ gameId: gid });
+          placeholder="Game ID"
+          onChange={(e) => setGameIdF(e.target.value)}
+          value={gameIdF}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              navigateToPlayerSelection({ gameId: gameIdF as Id<"games"> });
+            }
           }}
-        >
-          Create game
-        </button>
+        />
+        <div className="mt-2 text-center">
+          <button
+            className="btn btn-primary ms-2"
+            disabled={gameIdF === ""}
+            onClick={() =>
+              navigateToPlayerSelection({ gameId: gameIdF as Id<"games"> })
+            }
+          >
+            Join
+          </button>
+        </div>
+      </div>
+      <div className="w-100 text-center">or</div>
+      <div className="card m-2 p-2">
+        <h1 className="text-center">Create game</h1>
+        {/* labeled inputs */}
+        <div className="row">
+          <div className="col-3">
+            <label>Board size</label>
+          </div>
+          <div className="col">
+            <input
+              className="ms-2 form-control form-control-sm"
+              type="text"
+              placeholder="Width"
+              onChange={(e) => setSizeF(e.target.value)}
+              value={sizeF}
+            />
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-3">
+            <label>Starting resources</label>
+          </div>
+          <div className="col">
+            <input
+              className="ms-2 form-control form-control-sm"
+              type="text"
+              placeholder="Starting resources"
+              onChange={(e) => setStartingResourcesF(e.target.value)}
+              value={startingResourcesF}
+            />
+          </div>
+        </div>
+        <details>
+          <summary>Advanced</summary>
+          <div className="row">
+            <div className="col-3">
+              <label>Mediator bias</label>
+            </div>
+            <div className="col">
+              <input
+                className="ms-2 form-control form-control-sm"
+                type="text"
+                placeholder="% chance of biased mediator (0-100)"
+                onChange={(e) => setMediatorBiasProbPctF(e.target.value)}
+                value={mediatorBiasProbPctF}
+              />
+            </div>
+          </div>
+        </details>
+        <div className="mt-2 text-center">
+          <button
+            className="btn btn-primary"
+            onClick={async () => {
+              if (board.type === "err") return;
+              const gid = await create({ game: board.val.sample });
+              navigateToPlayerSelection({ gameId: gid });
+            }}
+          >
+            Create
+          </button>
+        </div>
         {board.type === "err" ? (
           <div className="text-danger">{board.msg}</div>
         ) : (
-          <>
+          <div>
+            <div>(starting board)</div>
             <RenderBoard game={board.val.sample} player="red" onMove={null} />
-          </>
+          </div>
         )}
       </div>
     </div>
