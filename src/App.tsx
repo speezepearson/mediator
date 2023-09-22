@@ -15,11 +15,17 @@ import {
 import { useMemo, useState } from "react";
 import { Game, Player } from "../convex/schema";
 import { Set } from "immutable";
+import { useNavigate } from "react-router-dom";
 
-function GameSelector(props: {
-  onCreate: (params: typeof api.games.create._args) => Promise<void>;
-  onJoin: (id: Id<"games">) => void;
-}) {
+export function WelcomePage() {
+  return <>Hi!</>;
+}
+
+export function GameSelectionPage() {
+  const navigate = useNavigate();
+
+  const create = useMutation(api.games.create);
+
   const [gameIdF, setGameIdF] = useState("");
   const [sizeF, setSizeF] = useState("5");
   const [startingResourcesF, setStartingResourcesF] = useState("30");
@@ -67,13 +73,14 @@ function GameSelector(props: {
         value={gameIdF}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
-            props.onJoin(gameIdF as Id<"games">);
+            navigate(`/g/${gameIdF}`);
           }
         }}
       />
       <button
         className="btn btn-sm btn-primary ms-2"
-        onClick={() => props.onJoin(gameIdF as Id<"games">)}
+        disabled={gameIdF === ""}
+        onClick={() => navigate(`/g/${gameIdF}`)}
       >
         Join game
       </button>
@@ -95,16 +102,17 @@ function GameSelector(props: {
         />
         <button
           className="btn btn-sm btn-primary"
-          onClick={() => {
+          onClick={async () => {
             if (board.type === "err") return;
-            props.onCreate({
-              game: board.val.sample,
-            });
+            const gid = await create({ game: board.val.sample });
+            navigate(`/g/${gid}`);
           }}
         >
           Create game
         </button>
-        {board.type === "err" ? <div className="text-danger">{board.msg}</div> : (
+        {board.type === "err" ? (
+          <div className="text-danger">{board.msg}</div>
+        ) : (
           <>
             <RenderBoard game={board.val.sample} player="red" onMove={null} />
           </>
@@ -114,24 +122,28 @@ function GameSelector(props: {
   );
 }
 
-function PlayerSelector(props: { onSet: (player: Player) => void }) {
+export type PlayerSelectionPageProps = {
+  gameId: Id<"games">;
+};
+export function PlayerSelectionPage(props: PlayerSelectionPageProps) {
+  const navigate = useNavigate();
   return (
     <div>
       You are:
       <button
-        onClick={() => props.onSet("red")}
+        onClick={() => navigate(`/g/${props.gameId}/red`)}
         className="btn btn-sm btn-primary ms-2"
       >
         Red
       </button>
       <button
-        onClick={() => props.onSet("blue")}
+        onClick={() => navigate(`/g/${props.gameId}/blue`)}
         className="btn btn-sm btn-primary ms-2"
       >
         Blue
       </button>
       <button
-        onClick={() => props.onSet("mediator")}
+        onClick={() => navigate(`/g/${props.gameId}/mediator`)}
         className="btn btn-sm btn-primary ms-2"
       >
         Mediator
@@ -222,34 +234,20 @@ function RenderBoard(props: {
   );
 }
 
-function App(props: {
-  urlGameId: null | Id<"games">;
-  urlPlayer: null | Player;
-}) {
-  const createGame = useMutation(api.games.create);
-  const [gameId, setGameId] = useState<null | Id<"games">>(props.urlGameId);
-  const [player, setPlayer] = useState<null | Player>(props.urlPlayer);
+export type GamePageProps = {
+  gameId: Id<"games">;
+  player: Player;
+};
+export function GamePage({ gameId, player }: GamePageProps) {
   const game = useQuery(
     api.games.get,
-    gameId === null
+    gameId === undefined
       ? "skip"
       : {
           id: gameId,
         },
   );
   const moveMut = useMutation(api.games.move);
-
-  if (gameId === null) {
-    return (
-      <GameSelector
-        onCreate={async (params) => setGameId(await createGame(params))}
-        onJoin={setGameId}
-      />
-    );
-  }
-  if (player === null) {
-    return <PlayerSelector onSet={setPlayer} />;
-  }
 
   if (game === undefined) {
     return <div>Loading...</div>;
@@ -310,4 +308,4 @@ function App(props: {
   );
 }
 
-export default App;
+export function Root() {}
