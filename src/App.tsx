@@ -7,6 +7,7 @@ import {
   claim,
   hexNeighbors,
   hexy2xy,
+  otherActor,
   sampleFromGameDistribution,
   score,
   step,
@@ -190,71 +191,87 @@ function RenderBoard(props: {
 
   return (
     <div
-      className="position-relative m-4"
+      className="ratio"
       style={{
-        height: `${3 * (maxY - minY)}em`,
-        width: `${3 * (maxX - minX)}em`,
+        maxWidth: "40em",
+        ["--bs-aspect-ratio" as string]: `${(100 * Math.sqrt(3)) / 2}%`,
       }}
     >
-      {" "}
-      {game.cells.map(({ i, j, v: cell }) => {
-        const canClaim =
-          isOurTurn &&
-          onMove !== null &&
-          ((!game.currentActorDelegated && player === game.currentActor) ||
-            (game.currentActorDelegated && player === "mediator")) &&
-          cell.occupier?.actor !== game.currentActor &&
-          neighborCellIdxs.has(`${i},${j}`) &&
-          claim(game, i, j).type === "ok";
-        const [x, y] = hexy2xy(i, j);
-        return (
-          <div
-            key={`${i},${j}`}
-            className="position-absolute text-center p-0 m-0"
-            style={{
-              left: `${3 * (x - minX)}em`,
-              top: `${3 * (maxY - y)}em`,
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            <button
-              className={`btn btn-sm btn-outline-${
-                canClaim ? "dark" : "muted"
-              }`}
-              style={{
-                backgroundColor: ((): string => {
-                  switch (cell.occupier?.actor) {
-                    case undefined:
-                      return "";
-                    case "red":
-                      return "#ff000044";
-                    case "blue":
-                      return "#0000ff44";
-                  }
-                })(),
-                outline: cell.occupier?.mediated ? "2px solid gold" : undefined,
-              }}
-              disabled={!canClaim}
-              onClick={async () => {
-                if (onMove === null) return;
-                if (cell.occupier?.actor === game.currentActor)
-                  return await onMove({ type: "release", i, j });
-                if (!canClaim) return;
-                await onMove({ type: "claim", i, j });
-              }}
-            >
-              {player === "mediator" ? (
-                <>
-                  <div style={{ color: "red" }}>{cell.worth.red}</div>
-                  <div style={{ color: "blue" }}>{cell.worth.blue}</div>
-                </>
-              ) : (
-                cell.worth[player]
-              )}
-            </button>
-          </div>
-        );
-      })}
+      <div className="d-flex flex-row justify-content-center align-items-center p-4">
+        <div
+          className="position-relative w-100 h-100"
+          style={
+            {
+              // height: `${3 * (maxY - minY)}em`,
+              // width: `${3 * (maxX - minX)}em`,
+            }
+          }
+        >
+          {" "}
+          {game.cells.map(({ i, j, v: cell }) => {
+            const canClaim =
+              isOurTurn &&
+              onMove !== null &&
+              ((!game.currentActorDelegated && player === game.currentActor) ||
+                (game.currentActorDelegated && player === "mediator")) &&
+              cell.occupier?.actor !== game.currentActor &&
+              neighborCellIdxs.has(`${i},${j}`) &&
+              claim(game, i, j).type === "ok";
+            const [x, y] = hexy2xy(i, j);
+            return (
+              <div
+                key={`${i},${j}`}
+                className="position-absolute text-center p-0 m-0"
+                style={{
+                  left: `${(100 * (x - minX)) / (maxX - minX) - 5}%`,
+                  top: `${(100 * (y - minY)) / (maxY - minY) - 5}%`,
+                  transform: "translate(-50%, -50%)",
+                  width: 0,
+                  height: 0,
+                }}
+              >
+                <button
+                  className={`btn btn-sm btn-outline-${
+                    canClaim ? "dark" : "muted"
+                  }`}
+                  style={{
+                    backgroundColor: ((): string => {
+                      switch (cell.occupier?.actor) {
+                        case undefined:
+                          return "";
+                        case "red":
+                          return "#ff000044";
+                        case "blue":
+                          return "#0000ff44";
+                      }
+                    })(),
+                    outline: cell.occupier?.mediated
+                      ? "2px solid gold"
+                      : undefined,
+                  }}
+                  disabled={!canClaim}
+                  onClick={async () => {
+                    if (onMove === null) return;
+                    if (cell.occupier?.actor === game.currentActor)
+                      return await onMove({ type: "release", i, j });
+                    if (!canClaim) return;
+                    await onMove({ type: "claim", i, j });
+                  }}
+                >
+                  {player === "mediator" ? (
+                    <>
+                      <div style={{ color: "red" }}>{cell.worth.red}</div>
+                      <div style={{ color: "blue" }}>{cell.worth.blue}</div>
+                    </>
+                  ) : (
+                    cell.worth[player]
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -287,104 +304,109 @@ export function GamePage({ gameId, player }: GamePageProps) {
   const scores = score(game);
 
   return (
-    <>
-      <div>
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-secondary ms-1"
-          data-bs-toggle="modal"
-          data-bs-target="#shareModal"
+    <div className="row">
+      <div className="col-3 bg-light border-end border-secondary p-4">
+        <div>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary ms-1"
+            data-bs-toggle="modal"
+            data-bs-target="#shareModal"
+          >
+            <i className="fa fa-share"></i> Share
+          </button>
+        </div>
+        <div
+          className="modal fade"
+          id="shareModal"
+          tabIndex={-1}
+          aria-labelledby="exampleModalLabel"
+          aria-hidden="true"
         >
-          <i className="fa fa-share"></i> Share
-        </button>
-      </div>
-      <div
-        className="modal fade"
-        id="shareModal"
-        tabIndex={-1}
-        aria-labelledby="exampleModalLabel"
-        aria-hidden="true"
-      >
-        <div className="modal-dialog">
-          <div className="modal-content">
-            <div className="modal-header">
-              {/* <h5 className="modal-title" id="exampleModalLabel">Modal title</h5> */}
-              <button
-                type="button"
-                className="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
-            </div>
-            <div className="modal-body text-center">
-              <div className="mt-1">
-                Your friends can join by scanning this handy QR code:
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                {/* <h5 className="modal-title" id="exampleModalLabel">Modal title</h5> */}
+                <button
+                  type="button"
+                  className="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"
+                ></button>
               </div>
-              <QRCode className="mt-2" value={joinLink} />
-              <div className="mt-2">Or, send them this link:</div>
-              <CopyWidget
-                className="mt-1 mx-auto"
-                style={{ maxWidth: "20em" }}
-                text={joinLink}
-              />
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
-                Close
-              </button>
+              <div className="modal-body text-center">
+                <div className="mt-1">
+                  Your friends can join by scanning this handy QR code:
+                </div>
+                <QRCode className="mt-2" value={joinLink} />
+                <div className="mt-2">Or, send them this link:</div>
+                <CopyWidget
+                  className="mt-1 mx-auto"
+                  style={{ maxWidth: "20em" }}
+                  text={joinLink}
+                />
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  data-bs-dismiss="modal"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      {game.isOver ? (
-        "Game over"
-      ) : isOurTurn ? (
-        <>
-          Your move!{" "}
-          {player === "mediator" && ` (on behalf of ${game.currentActor})`}{" "}
-        </>
-      ) : (
-        (game.currentActor === "red" ? "Red's turn" : "Blue's turn") +
-        (game.currentActorDelegated ? " (delegated)" : "")
-      )}
-      <div>
-        Your score:{" "}
-        {player === "mediator" ? (
+        {game.isOver ? (
+          "Game over"
+        ) : isOurTurn ? (
           <>
-            {scores.red + scores.blue} ={" "}
-            <span style={{ color: "red" }}>{scores.red}</span> +{" "}
-            <span style={{ color: "blue" }}>{scores.blue}</span>
+            Your move!{" "}
+            {player === "mediator" && ` (on behalf of ${game.currentActor})`}{" "}
           </>
         ) : (
-          scores[player]
+          (game.currentActor === "red" ? "Red's turn" : "Blue's turn") +
+          (game.currentActorDelegated ? " (delegated)" : "")
         )}
+        <div>
+          Your score:{" "}
+          {player === "mediator" ? (
+            <>
+              {scores.red + scores.blue} ={" "}
+              <span style={{ color: "red" }}>{scores.red}</span> +{" "}
+              <span style={{ color: "blue" }}>{scores.blue}</span>
+            </>
+          ) : (
+            scores[player]
+          )}
+        </div>
+        {player !== "mediator" && (
+          <div>{otherActor(player)}'s score: who cares</div>
+        )}
+        {player !== "mediator" && (
+          <div>Remaining resources: {game.remainingResources[player]}</div>
+        )}
+        <div className="mt-2">
+          <button
+            className="btn btn-sm btn-outline-primary"
+            onClick={() => move({ type: "pass" })}
+            disabled={!isOurTurn}
+          >
+            Pass {step(game, { type: "pass" })?.isOver && " (end game)"}
+          </button>
+          <button
+            className="btn btn-sm btn-outline-primary ms-1"
+            onClick={() => move({ type: "delegateToMediator" })}
+            disabled={!isOurTurn}
+          >
+            Delegate
+          </button>
+        </div>
       </div>
-      {player !== "mediator" && (
-        <div>Remaining resources: {game.remainingResources[player]}</div>
-      )}
-      <div className="mt-2">
-        <button
-          className="btn btn-sm btn-outline-primary"
-          onClick={() => move({ type: "pass" })}
-          disabled={!isOurTurn}
-        >
-          Pass {step(game, { type: "pass" })?.isOver && " (end game)"}
-        </button>
-        <button
-          className="btn btn-sm btn-outline-primary ms-1"
-          onClick={() => move({ type: "delegateToMediator" })}
-          disabled={!isOurTurn}
-        >
-          Delegate
-        </button>
+      <div className="col-9">
+        <RenderBoard game={game} player={player} onMove={move} />
       </div>
-      <RenderBoard game={game} player={player} onMove={move} />
-    </>
+    </div>
   );
 }
-
-export function Root() {}

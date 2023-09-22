@@ -12,9 +12,7 @@ export function Root() {
           {/* right-aligned stuff */}
         </div>
       </nav>
-      <div className="container">
-        <Outlet />
-      </div>
+      <Outlet />
     </div>
   );
 }

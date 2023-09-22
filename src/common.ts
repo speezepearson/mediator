@@ -172,7 +172,7 @@ export type Result<T> = { type: "ok"; val: T } | { type: "err"; msg: string };
 
 const sqrt3_2 = Math.sqrt(3) / 2;
 export function hexy2xy(i: number, j: number): [number, number] {
-  return [i * sqrt3_2, -i / 2 + j];
+  return [-i / 2 + j, i * sqrt3_2];
 }
 function makeHexGrid<T>(
   sideLength: number,
