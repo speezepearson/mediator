@@ -15,16 +15,17 @@ import {
 import { useMemo, useState } from "react";
 import { Game, Player } from "../convex/schema";
 import { Set } from "immutable";
-import { useHref, useNavigate } from "react-router-dom";
+import { useHref } from "react-router-dom";
 import QRCode from "react-qr-code";
 import { CopyWidget } from "./components/CopyWidget";
+import { useNavigateToGame, useNavigateToPlayerSelection } from "./routes";
 
 export function WelcomePage() {
   return <>Hi!</>;
 }
 
 export function GameSelectionPage() {
-  const navigate = useNavigate();
+  const navigateToPlayerSelection = useNavigateToPlayerSelection();
 
   const create = useMutation(api.games.create);
 
@@ -75,14 +76,16 @@ export function GameSelectionPage() {
         value={gameIdF}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
-            navigate(`/g/${gameIdF}`);
+            navigateToPlayerSelection({ gameId: gameIdF as Id<"games"> });
           }
         }}
       />
       <button
         className="btn btn-sm btn-primary ms-2"
         disabled={gameIdF === ""}
-        onClick={() => navigate(`/g/${gameIdF}`)}
+        onClick={() =>
+          navigateToPlayerSelection({ gameId: gameIdF as Id<"games"> })
+        }
       >
         Join game
       </button>
@@ -107,7 +110,7 @@ export function GameSelectionPage() {
           onClick={async () => {
             if (board.type === "err") return;
             const gid = await create({ game: board.val.sample });
-            navigate(`/g/${gid}`);
+            navigateToPlayerSelection({ gameId: gid });
           }}
         >
           Create game
@@ -128,24 +131,26 @@ export type PlayerSelectionPageProps = {
   gameId: Id<"games">;
 };
 export function PlayerSelectionPage(props: PlayerSelectionPageProps) {
-  const navigate = useNavigate();
+  const navigateToGame = useNavigateToGame();
   return (
     <div>
       You are:
       <button
-        onClick={() => navigate(`/g/${props.gameId}/red`)}
+        onClick={() => navigateToGame({ gameId: props.gameId, player: "red" })}
         className="btn btn-sm btn-primary ms-2"
       >
         Red
       </button>
       <button
-        onClick={() => navigate(`/g/${props.gameId}/blue`)}
+        onClick={() => navigateToGame({ gameId: props.gameId, player: "blue" })}
         className="btn btn-sm btn-primary ms-2"
       >
         Blue
       </button>
       <button
-        onClick={() => navigate(`/g/${props.gameId}/mediator`)}
+        onClick={() =>
+          navigateToGame({ gameId: props.gameId, player: "mediator" })
+        }
         className="btn btn-sm btn-primary ms-2"
       >
         Mediator
@@ -161,18 +166,18 @@ function RenderBoard(props: {
 }) {
   const { game, player, onMove } = props;
   const isOurTurn = !game.isOver && whoseMove(game) === player;
-  const {minX, maxX, minY, maxY} = game.cells.reduce(
-    ({minX, maxX, minY, maxY}, {i, j}) => {
-      const [x,y] = hexy2xy(i, j);
+  const { minX, maxX, minY, maxY } = game.cells.reduce(
+    ({ minX, maxX, minY, maxY }, { i, j }) => {
+      const [x, y] = hexy2xy(i, j);
       return {
         minX: Math.min(minX, x),
         maxX: Math.max(maxX, x),
         minY: Math.min(minY, y),
         maxY: Math.max(maxY, y),
-    };
+      };
     },
-    {minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity},
-  )
+    { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity },
+  );
 
   const ownedCells = game.cells.filter(
     ({ v }) => v.occupier?.actor === game.currentActor,
@@ -184,7 +189,13 @@ function RenderBoard(props: {
   );
 
   return (
-    <div className="position-relative m-4" style={{height: `${3*(maxY-minY)}em`, width: `${3*(maxX-minX)}em`}}>
+    <div
+      className="position-relative m-4"
+      style={{
+        height: `${3 * (maxY - minY)}em`,
+        width: `${3 * (maxX - minX)}em`,
+      }}
+    >
       {" "}
       {game.cells.map(({ i, j, v: cell }) => {
         const canClaim =
@@ -275,18 +286,17 @@ export function GamePage({ gameId, player }: GamePageProps) {
   const move = (action: Action) => moveMut({ id: game._id, player, action });
   const scores = score(game);
 
-
   return (
     <>
       <div>
-      <button
-        type="button"
-        className="btn btn-sm btn-outline-secondary ms-1"
-        data-bs-toggle="modal"
-        data-bs-target="#shareModal"
-      >
-        <i className="fa fa-share"></i> Share
-      </button>
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary ms-1"
+          data-bs-toggle="modal"
+          data-bs-target="#shareModal"
+        >
+          <i className="fa fa-share"></i> Share
+        </button>
       </div>
       <div
         className="modal fade"
