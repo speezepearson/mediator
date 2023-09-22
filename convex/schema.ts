@@ -8,6 +8,9 @@ export const playerT = v.union(actorT, v.literal("mediator"));
 export type Player = typeof playerT.type;
 
 export const gameT = v.object({
+  mediatorScoreWeights: v.optional(
+    v.object({ red: v.number(), blue: v.number() }),
+  ),
   remainingResources: v.object({ red: v.number(), blue: v.number() }),
   currentActor: actorT,
   lastActorPassed: v.boolean(),

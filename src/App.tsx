@@ -34,6 +34,7 @@ export function GameSelectionPage() {
   const [gameIdF, setGameIdF] = useState("");
   const [sizeF, setSizeF] = useState("5");
   const [startingResourcesF, setStartingResourcesF] = useState("30");
+  const [mediatorBiasProbPctF, setMediatorBiasProbPctF] = useState("");
 
   const board: Result<{ dist: GameDistribution; sample: Game }> =
     useMemo(() => {
@@ -53,6 +54,16 @@ export function GameSelectionPage() {
         return { type: "err", msg: "starting resources must be positive" };
       }
 
+      const mediatorBiasProbPct = mediatorBiasProbPctF
+        ? parseFloat(mediatorBiasProbPctF)
+        : 0;
+      if (
+        isNaN(mediatorBiasProbPct) ||
+        mediatorBiasProbPct < 0 ||
+        mediatorBiasProbPct > 100
+      )
+        return { type: "err", msg: "invalid mediator bias prob" };
+
       const dist: GameDistribution = {
         resources: { type: "exact", value: startingResources },
         board: {
@@ -61,12 +72,16 @@ export function GameSelectionPage() {
           min: 0,
           max: 10,
         },
+        mediatorBias: {
+          type: "prob-symmetric-2x",
+          p: mediatorBiasProbPct / 100,
+        },
       };
       return {
         type: "ok",
         val: { dist, sample: sampleFromGameDistribution(dist) },
       };
-    }, [sizeF, startingResourcesF]);
+    }, [sizeF, startingResourcesF, mediatorBiasProbPctF]);
 
   return (
     <div>
@@ -106,6 +121,13 @@ export function GameSelectionPage() {
           placeholder="Starting resources"
           onChange={(e) => setStartingResourcesF(e.target.value)}
           value={startingResourcesF}
+        />
+        <input
+          className="ms-2"
+          type="number"
+          placeholder="% chance of biased mediator (0-100)"
+          onChange={(e) => setMediatorBiasProbPctF(e.target.value)}
+          value={mediatorBiasProbPctF}
         />
         <button
           className="btn btn-sm btn-primary"
@@ -229,6 +251,9 @@ function RenderBoard(props: {
     ),
   );
 
+  const rw = game.mediatorScoreWeights?.red || 1;
+  const bw = game.mediatorScoreWeights?.blue || 1;
+
   return (
     <div
       className="ratio"
@@ -301,8 +326,10 @@ function RenderBoard(props: {
                 >
                   {player === "mediator" ? (
                     <>
-                      <div style={{ color: "red" }}>{cell.worth.red}</div>
-                      <div style={{ color: "blue" }}>{cell.worth.blue}</div>
+                      <div style={{ color: "red" }}>{cell.worth.red * rw}</div>
+                      <div style={{ color: "blue" }}>
+                        {cell.worth.blue * bw}
+                      </div>
                     </>
                   ) : (
                     cell.worth[player]
@@ -337,8 +364,9 @@ export function GamePage({ gameId, player }: GamePageProps) {
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") {
-        if (viewTime === null) { if (nActions > 0) setViewTime(nActions - 1); }
-        else if (viewTime > 0) setViewTime(viewTime - 1);
+        if (viewTime === null) {
+          if (nActions > 0) setViewTime(nActions - 1);
+        } else if (viewTime > 0) setViewTime(viewTime - 1);
       } else if (e.key === "ArrowRight") {
         if (viewTime === null) return;
         else if (viewTime >= nActions - 1) setViewTime(null);
@@ -453,15 +481,21 @@ export function GamePage({ gameId, player }: GamePageProps) {
               <tr>
                 <td>Your score:</td>
                 <td>
-                  {player === "mediator" ? (
-                    <>
-                      {scores.red + scores.blue} ={" "}
-                      <span style={{ color: "red" }}>{scores.red}</span> +{" "}
-                      <span style={{ color: "blue" }}>{scores.blue}</span>
-                    </>
-                  ) : (
-                    scores[player]
-                  )}
+                  {player === "mediator"
+                    ? (() => {
+                        const rw = viewGame.mediatorScoreWeights?.red || 1;
+                        const bw = viewGame.mediatorScoreWeights?.blue || 1;
+                        return (
+                          <>
+                            {scores.red * rw + scores.blue * bw} ={" "}
+                            <span style={{ color: "red" }}>{scores.red}</span>
+                            {rw !== 1 && <>·{rw}</>} +{" "}
+                            <span style={{ color: "blue" }}>{scores.blue}</span>
+                            {rw !== 1 && <>·{bw}</>}
+                          </>
+                        );
+                      })()
+                    : scores[player]}
                 </td>
               </tr>
               {player !== "mediator" && (

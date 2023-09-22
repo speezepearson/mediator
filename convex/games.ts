@@ -21,6 +21,10 @@ export const gameDistributionT = v.object({
     min: v.number(),
     max: v.number(),
   }),
+  mediatorBias: v.object({
+    type: v.literal("prob-symmetric-2x"),
+    p: v.number(),
+  }),
 });
 export type GameDistribution = typeof gameDistributionT.type;
 

@@ -154,6 +154,14 @@ export function sampleFromGameDistribution(dist: GameDistribution): Game {
   cells[redStart].v.occupier = { actor: "red", mediated: false };
   cells[blueStart].v.occupier = { actor: "blue", mediated: false };
 
+  const mediatorScoreWeights = (() => {
+    switch (dist.mediatorBias.type) {
+      case "prob-symmetric-2x": {
+        if (Math.random() > dist.mediatorBias.p) return { red: 1, blue: 1 };
+        return Math.random() < 0.5 ? { red: 2, blue: 1 } : { red: 1, blue: 2 };
+      }
+    }
+  })();
   return {
     cells,
     remainingResources,
@@ -161,6 +169,7 @@ export function sampleFromGameDistribution(dist: GameDistribution): Game {
     currentActorDelegated: false,
     lastActorPassed: false,
     isOver: false,
+    mediatorScoreWeights,
   };
 }
 
