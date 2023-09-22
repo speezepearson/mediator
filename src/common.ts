@@ -1,5 +1,5 @@
-import { Action, GameDistribution } from "../convex/games";
-import { Actor, Game, Player } from "../convex/schema";
+import { GameDistribution } from "../convex/games";
+import { Action, Actor, Game, Player } from "../convex/schema";
 
 export function claim(
   game: Game,
@@ -200,4 +200,11 @@ export function hexNeighbors(i: number, j: number): [number, number][] {
     [i + 1, j + 1],
     [i - 1, j - 1],
   ];
+}
+
+export function currentPlayer(game: Game): Player {
+  if (game.currentActorDelegated) {
+    return "mediator";
+  }
+  return game.currentActor;
 }

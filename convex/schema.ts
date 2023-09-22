@@ -34,6 +34,26 @@ export const gameT = v.object({
 });
 export type Game = typeof gameT.type;
 
+export const actionT = v.union(
+  v.object({
+    type: v.literal("claim"),
+    i: v.number(),
+    j: v.number(),
+  }),
+  v.object({
+    type: v.literal("release"),
+    i: v.number(),
+    j: v.number(),
+  }),
+  v.object({ type: v.literal("delegateToMediator") }),
+  v.object({ type: v.literal("pass") }),
+);
+export type Action = typeof actionT.type;
+
 export default defineSchema({
-  games: defineTable(gameT),
+  games: defineTable({
+    start: gameT,
+    actions: v.array(actionT),
+    current: gameT,
+  }),
 });

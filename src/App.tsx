@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
-import { Action, GameDistribution } from "../convex/games";
+import { GameDistribution } from "../convex/games";
 import {
   Result,
   claim,
@@ -14,12 +14,13 @@ import {
   whoseMove,
 } from "./common";
 import { HTMLAttributes, useMemo, useState } from "react";
-import { Game, Player } from "../convex/schema";
+import { Action, Game, Player } from "../convex/schema";
 import { Set } from "immutable";
 import { useHref } from "react-router-dom";
 import QRCode from "react-qr-code";
 import { CopyWidget } from "./components/CopyWidget";
 import { useNavigateToGame, useNavigateToPlayerSelection } from "./routes";
+import React from "react";
 
 export function WelcomePage() {
   return <>Hi!</>;
@@ -272,7 +273,7 @@ function RenderBoard(props: {
                 }
                 style={{
                   left: `${3.2 * (x - minX) - 2}em`,
-                  top: `${3.2 * (y - minY) - 2}em`,
+                  top: `${3.2 * (y - minY) - 1}em`,
                 }}
                 innerStyle={{
                   backgroundColor: ((): string => {
@@ -330,6 +331,23 @@ export function GamePage({ gameId, player }: GamePageProps) {
         },
   );
   const moveMut = useMutation(api.games.move);
+  const [viewTime, setViewTime] = useState<null | number>(null);
+
+  const nActions = game?.actions.length ?? -1;
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        if (viewTime === null) { if (nActions > 0) setViewTime(nActions - 1); }
+        else if (viewTime > 0) setViewTime(viewTime - 1);
+      } else if (e.key === "ArrowRight") {
+        if (viewTime === null) return;
+        else if (viewTime >= nActions - 1) setViewTime(null);
+        else setViewTime(viewTime + 1);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewTime, setViewTime, nActions]);
 
   const joinLink = `${window.location.origin}/${useHref(`/g/${game?._id}`)}`;
 
@@ -339,123 +357,151 @@ export function GamePage({ gameId, player }: GamePageProps) {
   if (game === null) {
     return <div>Game not found</div>;
   }
-  const isOurTurn = !game.isOver && whoseMove(game) === player;
+
+  const viewGame =
+    viewTime === null
+      ? game.current
+      : game.actions.slice(0, viewTime).reduce(step, game.start);
+
+  const isOurTurn = !viewGame.isOver && whoseMove(viewGame) === player;
   const move = (action: Action) => moveMut({ id: game._id, player, action });
-  const scores = score(game);
+  const scores = score(viewGame);
 
   return (
-    <div className="row">
-      <div className="col-3 bg-light border-end border-secondary p-4">
-        <div>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary ms-1"
-            data-bs-toggle="modal"
-            data-bs-target="#shareModal"
+    <div className="container-fluid">
+      <div className="row">
+        <div className="col-3 bg-light border-end border-secondary p-4">
+          <div>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary ms-1"
+              data-bs-toggle="modal"
+              data-bs-target="#shareModal"
+            >
+              <i className="fa fa-share"></i> Share
+            </button>
+          </div>
+          <div
+            className="modal fade"
+            id="shareModal"
+            tabIndex={-1}
+            aria-labelledby="exampleModalLabel"
+            aria-hidden="true"
           >
-            <i className="fa fa-share"></i> Share
-          </button>
-        </div>
-        <div
-          className="modal fade"
-          id="shareModal"
-          tabIndex={-1}
-          aria-labelledby="exampleModalLabel"
-          aria-hidden="true"
-        >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
-                {/* <h5 className="modal-title" id="exampleModalLabel">Modal title</h5> */}
-                <button
-                  type="button"
-                  className="btn-close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"
-                ></button>
-              </div>
-              <div className="modal-body text-center">
-                <div className="mt-1">
-                  Your friends can join by scanning this handy QR code:
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-header">
+                  {/* <h5 className="modal-title" id="exampleModalLabel">Modal title</h5> */}
+                  <button
+                    type="button"
+                    className="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                  ></button>
                 </div>
-                <QRCode className="mt-2" value={joinLink} />
-                <div className="mt-2">Or, send them this link:</div>
-                <CopyWidget
-                  className="mt-1 mx-auto"
-                  style={{ maxWidth: "20em" }}
-                  text={joinLink}
-                />
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  data-bs-dismiss="modal"
-                >
-                  Close
-                </button>
+                <div className="modal-body text-center">
+                  <div className="mt-1">
+                    Your friends can join by scanning this handy QR code:
+                  </div>
+                  <QRCode className="mt-2" value={joinLink} />
+                  <div className="mt-2">Or, send them this link:</div>
+                  <CopyWidget
+                    className="mt-1 mx-auto"
+                    style={{ maxWidth: "20em" }}
+                    text={joinLink}
+                  />
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        {game.isOver ? (
-          "Game over"
-        ) : isOurTurn ? (
-          <>
-            Your move!{" "}
-            {player === "mediator" && ` (on behalf of ${game.currentActor})`}{" "}
-          </>
-        ) : (
-          (game.currentActor === "red" ? "Red's turn" : "Blue's turn") +
-          (game.currentActorDelegated ? " (delegated)" : "")
-        )}
-        <table className="table" style={{ maxWidth: "20em" }}>
-          <tr>
-            <td>Your score:</td>
-            <td>
-              {player === "mediator" ? (
-                <>
-                  {scores.red + scores.blue} ={" "}
-                  <span style={{ color: "red" }}>{scores.red}</span> +{" "}
-                  <span style={{ color: "blue" }}>{scores.blue}</span>
-                </>
-              ) : (
-                scores[player]
+          {viewTime === null ? (
+            <div>Turn {nActions}</div>
+          ) : (
+            <div className="text-danger">
+              Viewing at time {viewTime} / {nActions - 1}{" "}
+              <button
+                className="btn btn-sm btn-outline-danger ms-1"
+                onClick={() => setViewTime(null)}
+              >
+                Reset
+              </button>
+            </div>
+          )}
+          {viewGame.isOver ? (
+            "Game over"
+          ) : isOurTurn ? (
+            <>
+              Your move!{" "}
+              {player === "mediator" &&
+                ` (on behalf of ${viewGame.currentActor})`}{" "}
+            </>
+          ) : (
+            (viewGame.currentActor === "red" ? "Red's turn" : "Blue's turn") +
+            (viewGame.currentActorDelegated ? " (delegated)" : "")
+          )}
+          <table className="table" style={{ maxWidth: "20em" }}>
+            <tbody>
+              <tr>
+                <td>Your score:</td>
+                <td>
+                  {player === "mediator" ? (
+                    <>
+                      {scores.red + scores.blue} ={" "}
+                      <span style={{ color: "red" }}>{scores.red}</span> +{" "}
+                      <span style={{ color: "blue" }}>{scores.blue}</span>
+                    </>
+                  ) : (
+                    scores[player]
+                  )}
+                </td>
+              </tr>
+              {player !== "mediator" && (
+                <tr>
+                  <td>{playerName(otherActor(player))}'s score:</td>
+                  <td> w/e</td>
+                </tr>
               )}
-            </td>
-          </tr>
-          {player !== "mediator" && (
-            <tr>
-              <td>{playerName(otherActor(player))}'s score:</td>
-              <td> w/e</td>
-            </tr>
-          )}
-          {player !== "mediator" && (
-            <tr>
-              <td>Remaining resources:</td>
-              <td>{game.remainingResources[player]}</td>
-            </tr>
-          )}
-        </table>
-        <div className="mt-2">
-          <button
-            className="btn btn-sm btn-outline-primary"
-            onClick={() => move({ type: "pass" })}
-            disabled={!isOurTurn}
-          >
-            Pass {step(game, { type: "pass" })?.isOver && " (end game)"}
-          </button>
-          <button
-            className="btn btn-sm btn-outline-primary ms-1"
-            onClick={() => move({ type: "delegateToMediator" })}
-            disabled={!isOurTurn}
-          >
-            Delegate to Mediator
-          </button>
+              {player !== "mediator" && (
+                <tr>
+                  <td>Remaining resources:</td>
+                  <td>{viewGame.remainingResources[player]}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          <div className="mt-2">
+            <button
+              className="btn btn-sm btn-outline-primary"
+              onClick={() => move({ type: "pass" })}
+              disabled={!isOurTurn}
+            >
+              Pass {step(viewGame, { type: "pass" })?.isOver && " (end game)"}
+            </button>
+            <button
+              className="btn btn-sm btn-outline-primary ms-1"
+              onClick={() => move({ type: "delegateToMediator" })}
+              disabled={!isOurTurn}
+            >
+              Delegate to Mediator
+            </button>
+          </div>
         </div>
-      </div>
-      <div className="col-9">
-        <RenderBoard game={game} player={player} onMove={move} />
+        <div className="col-9">
+          <RenderBoard
+            game={viewGame}
+            player={player}
+            onMove={viewTime === null ? move : null}
+          />
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { gameT, playerT } from "./schema";
+import { actionT, gameT, playerT } from "./schema";
 import { whoseMove, step } from "../src/common";
 
 export const get = query({
@@ -31,25 +31,14 @@ export const create = mutation({
     if (storage > 20000) {
       throw new Error("game too big");
     }
-    return await ctx.db.insert("games", args.game);
+    return await ctx.db.insert("games", {
+      start: args.game,
+      actions: [],
+      current: args.game,
+    });
   },
 });
 
-export const actionT = v.union(
-  v.object({
-    type: v.literal("claim"),
-    i: v.number(),
-    j: v.number(),
-  }),
-  v.object({
-    type: v.literal("release"),
-    i: v.number(),
-    j: v.number(),
-  }),
-  v.object({ type: v.literal("delegateToMediator") }),
-  v.object({ type: v.literal("pass") }),
-);
-export type Action = typeof actionT.type;
 export const move = mutation({
   args: {
     id: v.id("games"),
@@ -61,13 +50,17 @@ export const move = mutation({
     if (oldGame === null) {
       throw new Error("Game not found");
     }
-    if (oldGame.isOver) {
+    if (oldGame.current.isOver) {
       throw new Error("Game already over");
     }
-    if (player !== whoseMove(oldGame)) {
+    if (player !== whoseMove(oldGame.current)) {
       throw new Error("not your turn");
     }
-    const newGame = step(oldGame, action);
-    await ctx.db.replace(id, newGame);
+    const newCurrent = step(oldGame.current, action);
+    await ctx.db.replace(id, {
+      start: oldGame.start,
+      actions: [...oldGame.actions, action],
+      current: newCurrent,
+    });
   },
 });
