@@ -359,23 +359,35 @@ export function GamePage({ gameId, player }: GamePageProps) {
   );
   const moveMut = useMutation(api.games.move);
   const [viewTime, setViewTime] = useState<null | number>(null);
-
   const nActions = game?.actions.length ?? -1;
+
+  const canRewind = viewTime === null ? nActions > 0 : viewTime > 0;
+  const rewind = useMemo(
+    () => () => {
+      if (viewTime === null) {
+        if (nActions > 0) setViewTime(nActions - 1);
+      } else if (viewTime > 0) setViewTime(viewTime - 1);
+    },
+    [viewTime, setViewTime, nActions],
+  );
+  const canFfward = viewTime !== null;
+  const ffward = useMemo(
+    () => () => {
+      if (viewTime === null) return;
+      else if (viewTime >= nActions - 1) setViewTime(null);
+      else setViewTime(viewTime + 1);
+    },
+    [viewTime, setViewTime, nActions],
+  );
+
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") {
-        if (viewTime === null) {
-          if (nActions > 0) setViewTime(nActions - 1);
-        } else if (viewTime > 0) setViewTime(viewTime - 1);
-      } else if (e.key === "ArrowRight") {
-        if (viewTime === null) return;
-        else if (viewTime >= nActions - 1) setViewTime(null);
-        else setViewTime(viewTime + 1);
-      }
+      if (e.key === "ArrowLeft") rewind();
+      else if (e.key === "ArrowRight") ffward();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [viewTime, setViewTime, nActions]);
+  }, [rewind, ffward]);
 
   const joinLink = `${window.location.origin}/${useHref(`/g/${game?._id}`)}`;
 
@@ -451,19 +463,35 @@ export function GamePage({ gameId, player }: GamePageProps) {
               </div>
             </div>
           </div>
-          {viewTime === null ? (
-            <div>Turn {nActions} (←/→ to view history)</div>
-          ) : (
-            <div className="text-danger">
-              Viewing at time {viewTime} / {nActions}{" "}
-              <button
-                className="btn btn-sm btn-outline-danger ms-1"
-                onClick={() => setViewTime(null)}
-              >
-                Reset
-              </button>
-            </div>
-          )}
+          <div>
+            {viewTime === null ? (
+              <div>Turn {nActions}</div>
+            ) : (
+              <div className="text-danger">
+                Viewing at time {viewTime} / {nActions}{" "}
+                <button
+                  className="btn btn-sm btn-outline-danger ms-1"
+                  onClick={() => setViewTime(null)}
+                >
+                  Reset
+                </button>
+              </div>
+            )}
+            <button
+              disabled={!canRewind}
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => rewind()}
+            >
+              &lt;&lt;
+            </button>
+            <button
+              disabled={!canFfward}
+              className="btn btn-sm btn-outline-secondary"
+              onClick={() => ffward()}
+            >
+              &gt;&gt;
+            </button>
+          </div>
           {viewGame.isOver ? (
             "Game over"
           ) : isOurTurn ? (
