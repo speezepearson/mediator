@@ -5,6 +5,7 @@ import { GameDistribution } from "../convex/games";
 import {
   Result,
   claim,
+  currentPlayer,
   hexNeighbors,
   hexy2xy,
   otherActor,
@@ -503,7 +504,18 @@ export function GamePage({ gameId, player }: GamePageProps) {
             </div>
           </div>
           <div>
-            <div>Turn {viewTime ?? nActions}</div>
+            <div>
+              Turn {viewTime ?? nActions} (
+              {((): string => {
+                switch (viewGame.currentActor) {
+                  case "red":
+                    return "R";
+                  case "blue":
+                    return "B";
+                }
+              })()}
+              {viewGame.currentActorDelegated && "(del)"})
+            </div>
             <button
               disabled={!canRewind}
               className="btn btn-sm btn-outline-secondary"
@@ -519,18 +531,6 @@ export function GamePage({ gameId, player }: GamePageProps) {
               &gt;&gt;
             </button>
           </div>
-          {viewGame.isOver ? (
-            "Game over"
-          ) : isOurTurn ? (
-            <>
-              Your move!{" "}
-              {player === "mediator" &&
-                ` (on behalf of ${viewGame.currentActor})`}{" "}
-            </>
-          ) : (
-            (viewGame.currentActor === "red" ? "Red's turn" : "Blue's turn") +
-            (viewGame.currentActorDelegated ? " (delegated)" : "")
-          )}
           <table className="table" style={{ maxWidth: "20em" }}>
             <tbody>
               <tr>
@@ -585,6 +585,13 @@ export function GamePage({ gameId, player }: GamePageProps) {
           </div>
         </div>
         <div className="col-9">
+          <h1
+            className={
+              currentPlayer(game.current) === player ? "visible" : "invisible"
+            }
+          >
+            {viewGame.isOver ? "Game over" : <>Your move!</>}
+          </h1>
           <RenderBoard
             game={viewGame}
             player={player}
