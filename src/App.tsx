@@ -56,7 +56,7 @@ export function GameSelectionPage() {
         return { type: "err", msg: "size must be <= 20" };
       }
       if (startingResources <= 0) {
-        return { type: "err", msg: "starting resources must be positive" };
+        return { type: "err", msg: "starting energy must be positive" };
       }
 
       const mediatorBiasProbPct = mediatorBiasProbPctF
@@ -135,13 +135,13 @@ export function GameSelectionPage() {
         </div>
         <div className="row">
           <div className="col-3">
-            <label>Starting resources</label>
+            <label>Starting energy</label>
           </div>
           <div className="col">
             <input
               className="ms-2 form-control form-control-sm"
               type="text"
-              placeholder="Starting resources"
+              placeholder="Starting energy"
               onChange={(e) => setStartingResourcesF(e.target.value)}
               value={startingResourcesF}
             />
@@ -267,7 +267,7 @@ function RenderBoard(props: {
 }) {
   const { game, player, onMove } = props;
   const isOurTurn = !game.isOver && whoseMove(game) === player;
-  const { minX, minY } = game.cells.reduce(
+  const { minX, maxX, minY } = game.cells.reduce(
     ({ minX, maxX, minY, maxY }, { i, j }) => {
       const [x, y] = hexy2xy(i, j);
       return {
@@ -296,7 +296,7 @@ function RenderBoard(props: {
     <div
       className="ratio"
       style={{
-        maxWidth: "40em",
+        maxWidth: `${3 * (maxX - minX + 2)}em`,
         ["--bs-aspect-ratio" as string]: `${(100 * Math.sqrt(3)) / 2}%`,
       }}
     >
@@ -567,7 +567,7 @@ export function GamePage({ gameId, player }: GamePageProps) {
               )}
               {player !== "mediator" && (
                 <tr>
-                  <td>Remaining resources:</td>
+                  <td>Remaining energy:</td>
                   <td>{viewGame.remainingResources[player]}</td>
                 </tr>
               )}
@@ -611,6 +611,38 @@ export function GamePage({ gameId, player }: GamePageProps) {
             player={player}
             onMove={viewTime === null ? move : null}
           />
+          <details open>
+            <summary>Rules</summary>
+            <ul>
+              <li>
+                There are two players, Red and Blue, who want to accumulate
+                territory. Each cell has some value to Red, and some value to
+                Blue.
+              </li>
+              <li>
+                Red and Blue each want to get as many points as possible. (Not
+                to get <i>more</i> points than the other player -- that would be
+                so uncivilized! Life isn't zero-sum!)
+              </li>
+              <li>
+                Red and Blue take turns claiming territory. Each starts with{" "}
+                {game.start.remainingResources.red} "energy": claiming an empty
+                cell takes 1 energy; taking a cell from the other player takes
+                3.
+              </li>
+              <li>
+                The game ends when both players pass (typically because they're
+                out of energy).
+              </li>
+              <li>
+                There is a third player, a "mediator," who wants <i>both</i>{" "}
+                players to do well: the mediator's score is the sum of the other
+                players'. The mediator can see both players' payoff functions,
+                and the other players can delegate any of their moves to the
+                mediator, in order to avoid conflict.
+              </li>
+            </ul>
+          </details>
         </div>
       </div>
     </div>
