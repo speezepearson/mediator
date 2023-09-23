@@ -443,9 +443,11 @@ export function GamePage({ gameId, player }: GamePageProps) {
       ? game.current
       : game.actions.slice(0, viewTime).reduce(step, game.start);
 
-  const isOurTurn = !viewGame.isOver && whoseMove(viewGame) === player;
-  const move = (action: Action) => moveMut({ id: game._id, player, action });
-  const scores = score(viewGame);
+  const irlIsOurTurn = whoseMove(game.current) === player;
+  const move = irlIsOurTurn
+    ? (action: Action) => moveMut({ id: game._id, player, action })
+    : null;
+  const viewScores = score(viewGame);
 
   return (
     <div className="container-fluid">
@@ -542,15 +544,19 @@ export function GamePage({ gameId, player }: GamePageProps) {
                         const bw = viewGame.mediatorScoreWeights?.blue || 1;
                         return (
                           <>
-                            {scores.red * rw + scores.blue * bw} ={" "}
-                            <span style={{ color: "red" }}>{scores.red}</span>
+                            {viewScores.red * rw + viewScores.blue * bw} ={" "}
+                            <span style={{ color: "red" }}>
+                              {viewScores.red}
+                            </span>
                             {rw !== 1 && <>·{rw}</>} +{" "}
-                            <span style={{ color: "blue" }}>{scores.blue}</span>
+                            <span style={{ color: "blue" }}>
+                              {viewScores.blue}
+                            </span>
                             {rw !== 1 && <>·{bw}</>}
                           </>
                         );
                       })()
-                    : scores[player]}
+                    : viewScores[player]}
                 </td>
               </tr>
               {player !== "mediator" && (
@@ -569,16 +575,24 @@ export function GamePage({ gameId, player }: GamePageProps) {
           </table>
           <div className="mt-2">
             <button
-              className="btn btn-sm btn-outline-primary"
-              onClick={() => move({ type: "pass" })}
-              disabled={!isOurTurn}
+              className={`btn btn-sm btn-outline-primary ${
+                viewTime === null ? "visible" : "invisible"
+              }`}
+              onClick={() => {
+                move && move({ type: "pass" });
+              }}
+              disabled={!irlIsOurTurn}
             >
               Pass {step(viewGame, { type: "pass" })?.isOver && " (end game)"}
             </button>
             <button
-              className="btn btn-sm btn-outline-primary ms-1"
-              onClick={() => move({ type: "delegateToMediator" })}
-              disabled={!isOurTurn}
+              className={`btn btn-sm btn-outline-primary ms-1 ${
+                viewTime === null ? "visible" : "invisible"
+              }`}
+              onClick={() => {
+                move && move({ type: "delegateToMediator" });
+              }}
+              disabled={!irlIsOurTurn}
             >
               Delegate to Mediator
             </button>
